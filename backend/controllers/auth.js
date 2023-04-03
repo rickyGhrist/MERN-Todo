@@ -2,10 +2,11 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 import User from '../models/User.js';
+import { createError } from '../utils/createError.js';
 
-export const register = async (req, res) => {
+export const register = async (req, res, next) => {
   if (!req.body.name || !req.body.email || !req.body.password) {
-    return res.json('Required fields are name, email and password');
+    return next(createError({ message: 'Required fields are name, email and password', status: 400 }));
   }
 
   try {
@@ -21,13 +22,13 @@ export const register = async (req, res) => {
     return res.status(201).json('New User Created');
   } catch (err) {
     console.log(err);
-    return res.json('Server error');
+    return next(err);
   }
 };
 
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
   if (!req.body.email || !req.body.password) {
-    return res.json('Required fields are email and password');
+    return next(createError({ message: 'Required fields are email and password', status: 400 }));
   }
 
   try {
@@ -36,12 +37,12 @@ export const login = async (req, res) => {
     );
 
     if (!user) {
-      return res.status(404).json('No User Found');
+      return next(createError({ message: 'User not found', status: 404 }));
     }
     const isPasswordCorrect = await bcryptjs.compare(req.body.password, user.password);
 
     if (!isPasswordCorrect) {
-      return res.json('invalid action');
+      return next(createError({ message: 'Invalid Password', status: 400 }));
     }
 
     const payload = {
@@ -58,6 +59,26 @@ export const login = async (req, res) => {
     }).status(200).json({ message: 'Login Success' });
   } catch (err) {
     console.log(err);
-    return res.json(err.message);
+    return next(err);
   }
+};
+
+export const logout = (req, res) => {
+  res.clearCookie('access_token');
+  return res.status(200).json({ message: 'Logout Success' });
+};
+
+export const isLoggedIn = (req, res) => {
+  const token = req.cookies.access_token;
+  if (!token) {
+    return res.json(false);
+  }
+
+  return jwt.verify(token, process.env.JWT_SECRET, (err) => {
+    if (err) {
+      return res.json(false);
+    }
+
+    return res.json(true);
+  });
 };
