@@ -16,15 +16,6 @@ export const createTask = async (req, res, next) => {
   }
 };
 
-export const getAll = async (req, res, next) => {
-  try {
-    const tasks = await Task.find({});
-    return res.status(200).json(tasks);
-  } catch (err) {
-    return next(createError({ message: 'Could not save task', status: 400 }));
-  }
-};
-
 export const currentTasks = async (req, res, next) => {
   try {
     const tasks = await Task.find({ user: req.user.id });
